@@ -6,18 +6,39 @@
 # Mac OS X makefile for bitcoinplus
 # Originally by Laszlo Hanyecz (solar@heliacal.net)
 
+define all-files-under
+$(patsubst ./%,%, \
+  $(shell cd $(LOCAL_PATH) ; \
+          find $(1) -name "$(2)" -and -not -name ".*") \
+ )
+endef
+
+define all-files-in
+$(patsubst ./%,%, \
+  $(shell cd $(LOCAL_PATH) ; \
+          find $(1) -name "$(2)" -depth 1 -and -not -name ".*") \
+ )
+endef
+
+define all-cpp-files-in
+$(call all-files-in,$(1),*.cpp)
+endef
+
+define all-c-files-in
+$(call all-files-in,$(1),*.c)
+endef
+
 CXX=llvm-g++
-DEPSDIR=/opt/local
+CC=llvm-gcc
+DEPSDIR=/usr/local
 
 INCLUDEPATHS= \
  -I"$(CURDIR)" \
  -I"$(CURDIR)"/obj \
- -I"$(DEPSDIR)/include" \
- -I"$(DEPSDIR)/include/db48"
+ -I"$(DEPSDIR)/include"
 
 LIBPATHS= \
- -L"$(DEPSDIR)/lib" \
- -L"$(DEPSDIR)/lib/db48"
+ -L"$(DEPSDIR)/lib"
 
 USE_UPNP:=1
 USE_IPV6:=1
@@ -27,7 +48,7 @@ LIBS= -dead_strip
 ifdef STATIC
 # Build STATIC if you are redistributing the bitcoinplusd binary
 LIBS += \
- $(DEPSDIR)/lib/db48/libdb_cxx-4.8.a \
+ $(DEPSDIR)/lib/libdb_cxx-4.8.a \
  $(DEPSDIR)/lib/libboost_system-mt.a \
  $(DEPSDIR)/lib/libboost_filesystem-mt.a \
  $(DEPSDIR)/lib/libboost_program_options-mt.a \
@@ -62,6 +83,9 @@ endif
 CFLAGS += -Wall -Wextra -Wformat -Wno-ignored-qualifiers -Wformat-security -Wno-unused-parameter \
     $(DEBUGFLAGS) $(DEFS) $(INCLUDEPATHS)
 
+C_SRC = $(call all-files-in,./src)
+C_OBJS = $(C_SRC:%.c=%.o)
+
 OBJS= \
     obj/fugue.o \
     obj/hamsi.o \
@@ -93,11 +117,13 @@ OBJS= \
     obj/bitcoinrpc.o \
     obj/rpcdump.o \
     obj/rpcnet.o \
+    obj/rpcsmessage.o \
     obj/rpcmining.o \
     obj/rpcwallet.o \
     obj/rpcblockchain.o \
     obj/rpcrawtransaction.o \
     obj/script.o \
+    obj/smessage.o \
     obj/sync.o \
     obj/util.o \
     obj/wallet.o \
@@ -155,6 +181,9 @@ obj/scrypt-x86.o: scrypt-x86.S
 	$(CXX) -c $(xCXXFLAGS) -MMD -o $@ $<
 
 obj/scrypt-x86_64.o: scrypt-x86_64.S
+	$(CXX) -c $(xCXXFLAGS) -MMD -o $@ $<
+
+obj/scrypt-arm.o: scrypt-arm.S
 	$(CXX) -c $(xCXXFLAGS) -MMD -o $@ $<
 
 bitcoinplusd: $(OBJS:obj/%=obj/%)
